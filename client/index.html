@@ -4,380 +4,128 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🦑 Squid Poker Solver</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:        #0a0a0c;
-    --surface:   #111116;
-    --border:    #1e1e28;
-    --accent:    #ff2d55;
-    --accent2:   #00e5ff;
-    --accent3:   #39ff14;
-    --text:      #e8e8f0;
-    --muted:     #555568;
-    --win:       #39ff14;
-    --lose:      #ff2d55;
-    --tie:       #ffd60a;
-    --mono:      'Share Tech Mono', monospace;
-    --display:   'Bebas Neue', cursive;
-    --body-font: 'Inter', sans-serif;
-  }
+:root {
+  --bg:#0a0a0c; --surface:#111116; --surface2:#16161e; --border:#1e1e28;
+  --accent:#ff2d55; --accent2:#00e5ff; --accent3:#39ff14; --accent4:#ffd60a;
+  --text:#e8e8f0; --muted:#555568;
+  --win:#39ff14; --lose:#ff2d55; --tie:#ffd60a;
+  --mono:'Share Tech Mono',monospace; --display:'Bebas Neue',cursive; --body:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:9999}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:100}
+.logo{font-family:var(--display);font-size:28px;letter-spacing:3px;color:var(--accent);text-shadow:0 0 20px rgba(255,45,85,0.4)}
+.logo span{color:var(--accent2)}
+.status{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:all .3s}
+.dot.on{background:var(--win);box-shadow:0 0 8px var(--win)}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--body-font);
-    font-size: 14px;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+.layout{display:grid;grid-template-columns:240px 1fr 280px;height:calc(100vh - 61px)}
 
-  /* Scanline overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.08) 2px,
-      rgba(0,0,0,0.08) 4px
-    );
-    pointer-events: none;
-    z-index: 9999;
-  }
+/* NAV */
+nav{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:16px 0}
+.ns{padding:8px 16px 6px;font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-top:8px}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;color:var(--muted);font-size:12px;transition:all .15s;border-left:3px solid transparent}
+.ni:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.ni.active{color:var(--accent);border-left-color:var(--accent);background:rgba(255,45,85,0.06)}
+.ni-icon{font-size:16px;width:20px;text-align:center}
 
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 32px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
+/* MAIN */
+main{overflow-y:auto;padding:28px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.panel{display:none}.panel.active{display:block}
+.ptitle{font-family:var(--display);font-size:26px;letter-spacing:2px;margin-bottom:4px}
+.psub{color:var(--muted);font-size:12px;margin-bottom:24px;font-weight:300}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:20px;margin-bottom:16px}
+.ctitle{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
 
-  .logo {
-    font-family: var(--display);
-    font-size: 32px;
-    letter-spacing: 3px;
-    color: var(--accent);
-    text-shadow: 0 0 20px rgba(255,45,85,0.5);
-  }
-  .logo span { color: var(--accent2); }
+label{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;margin-top:14px}
+label:first-of-type{margin-top:0}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 12px;font-family:var(--mono);font-size:12px;border-radius:2px;outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent2)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+textarea{resize:vertical;min-height:60px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
 
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .status-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: all 0.3s;
-  }
-  .status-dot.connected { background: var(--win); box-shadow: 0 0 8px var(--win); }
+btn,button{display:block;width:100%;background:var(--accent);color:#fff;border:none;padding:11px 20px;font-family:var(--display);font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:2px;margin-top:16px;transition:all .2s}
+button:hover{background:#ff4d6d;box-shadow:0 0 18px rgba(255,45,85,0.25)}
+button:active{transform:scale(.985)}
+button.sec{background:transparent;border:1px solid var(--accent2);color:var(--accent2)}
+button.sec:hover{background:rgba(0,229,255,0.07)}
+button.warn{background:transparent;border:1px solid var(--accent4);color:var(--accent4)}
 
-  .layout {
-    display: grid;
-    grid-template-columns: 260px 1fr 300px;
-    height: calc(100vh - 73px);
-  }
+.rbox{background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:16px;font-family:var(--mono);font-size:12px;min-height:60px;white-space:pre-wrap;word-break:break-all;color:var(--accent2);line-height:1.6}
+.rbox.loading::after{content:'■ ■ ■';animation:blink .7s steps(1) infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
-  /* LEFT NAV */
-  .nav {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    padding: 24px 0;
-  }
-  .nav-section {
-    padding: 0 16px 16px;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-  }
-  .nav-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 20px;
-    cursor: pointer;
-    color: var(--muted);
-    font-size: 13px;
-    transition: all 0.2s;
-    border-left: 3px solid transparent;
-    font-weight: 400;
-  }
-  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
-  .nav-item.active {
-    color: var(--accent);
-    border-left-color: var(--accent);
-    background: rgba(255,45,85,0.06);
-  }
-  .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+/* equity bar */
+.ebar{display:flex;height:28px;border-radius:2px;overflow:hidden;margin:14px 0 6px}
+.ew{background:var(--win);transition:width .5s ease}
+.et{background:var(--tie);transition:width .5s ease}
+.el{background:var(--lose);transition:width .5s ease}
+.elabels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px}
+.elabels .wl{color:var(--win)}.elabels .tl{color:var(--tie)}.elabels .ll{color:var(--lose)}
 
-  /* MAIN CONTENT */
-  .main {
-    overflow-y: auto;
-    padding: 32px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
+/* badge */
+.badge{display:inline-block;padding:3px 10px;border-radius:2px;font-family:var(--mono);font-size:10px;letter-spacing:1px;margin-right:6px}
+.b-ok{background:rgba(57,255,20,.1);color:var(--win);border:1px solid var(--win)}
+.b-bad{background:rgba(255,45,85,.1);color:var(--lose);border:1px solid var(--lose)}
+.b-tie{background:rgba(255,214,10,.1);color:var(--tie);border:1px solid var(--tie)}
+.b-info{background:rgba(0,229,255,.1);color:var(--accent2);border:1px solid var(--accent2)}
 
-  .panel {
-    display: none;
-  }
-  .panel.active { display: block; }
+/* recommendation */
+.rec{padding:14px 18px;border-radius:2px;margin-top:14px;border-left:4px solid;font-size:13px;line-height:1.6}
+.rec-ok{border-color:var(--win);background:rgba(57,255,20,.05)}
+.rec-bad{border-color:var(--lose);background:rgba(255,45,85,.05)}
+.rec-warn{border-color:var(--tie);background:rgba(255,214,10,.05)}
+.rec-title{font-family:var(--display);font-size:19px;letter-spacing:1px;margin-bottom:5px}
+.ev-row{display:flex;gap:20px;margin-top:10px;font-family:var(--mono);font-size:11px}
 
-  .panel-title {
-    font-family: var(--display);
-    font-size: 28px;
-    letter-spacing: 2px;
-    margin-bottom: 8px;
-    color: var(--text);
-  }
-  .panel-subtitle {
-    color: var(--muted);
-    font-size: 13px;
-    margin-bottom: 28px;
-    font-weight: 300;
-  }
+/* markers */
+.mgrid{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.mk{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all .2s;border:2px solid var(--border);background:var(--bg);user-select:none}
+.mk.has{border-color:var(--accent3);box-shadow:0 0 10px rgba(57,255,20,.35)}
+.mk.no{border-color:var(--muted);opacity:.5}
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 24px;
-    margin-bottom: 20px;
-  }
-  .card-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 16px;
-  }
+/* orbit vis */
+.orbit-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.orbit-label{font-family:var(--mono);font-size:11px;width:60px;color:var(--muted)}
+.orbit-bar-wrap{flex:1;background:var(--border);height:20px;border-radius:2px;overflow:hidden}
+.orbit-bar{height:100%;transition:width .5s ease;border-radius:2px}
+.orbit-val{font-family:var(--mono);font-size:11px;width:60px;text-align:right}
 
-  label {
-    display: block;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 6px;
-    margin-top: 16px;
-  }
-  label:first-of-type { margin-top: 0; }
+/* alert */
+.alert-box{padding:16px 20px;border-radius:2px;border:1px solid var(--accent);background:rgba(255,45,85,.08);margin-top:14px}
+.alert-title{font-family:var(--display);font-size:22px;color:var(--accent);letter-spacing:1px;margin-bottom:8px}
+.alert-body{font-size:13px;line-height:1.7;color:var(--text)}
 
-  input, select {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 10px 14px;
-    font-family: var(--mono);
-    font-size: 13px;
-    border-radius: 2px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  input:focus, select:focus { border-color: var(--accent2); }
-  input::placeholder { color: var(--muted); }
+/* sidebar */
+aside{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column}
+.sh{padding:14px 18px;font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.sc{cursor:pointer;color:var(--muted);font-size:10px;transition:color .2s}.sc:hover{color:var(--accent)}
+.log{flex:1;overflow-y:auto;padding:10px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.le{padding:7px 10px;margin-bottom:7px;border-radius:2px;font-family:var(--mono);font-size:10px;line-height:1.5;animation:si .2s ease;border-left:3px solid}
+@keyframes si{from{opacity:0;transform:translateX(6px)}to{opacity:1;transform:none}}
+.le.info{border-color:var(--accent2);background:rgba(0,229,255,.04);color:var(--accent2)}
+.le.ok{border-color:var(--win);background:rgba(57,255,20,.04);color:var(--win)}
+.le.err{border-color:var(--lose);background:rgba(255,45,85,.04);color:var(--lose)}
+.le.warn{border-color:var(--tie);background:rgba(255,214,10,.04);color:var(--tie)}
+.lt{opacity:.5;margin-right:5px}
 
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.divider{height:1px;background:var(--border);margin:18px 0}
+.hint{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:6px;line-height:1.5}
 
-  button {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    font-family: var(--display);
-    font-size: 16px;
-    letter-spacing: 2px;
-    cursor: pointer;
-    border-radius: 2px;
-    margin-top: 20px;
-    transition: all 0.2s;
-    width: 100%;
-  }
-  button:hover { background: #ff4d6d; box-shadow: 0 0 20px rgba(255,45,85,0.3); }
-  button:active { transform: scale(0.98); }
-  button.secondary {
-    background: transparent;
-    border: 1px solid var(--accent2);
-    color: var(--accent2);
-  }
-  button.secondary:hover { background: rgba(0,229,255,0.08); box-shadow: 0 0 20px rgba(0,229,255,0.2); }
-
-  /* RESULT PANEL */
-  .result-box {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    padding: 20px;
-    font-family: var(--mono);
-    font-size: 13px;
-    min-height: 80px;
-    white-space: pre-wrap;
-    word-break: break-all;
-    color: var(--accent2);
-    position: relative;
-  }
-  .result-box.loading::after {
-    content: '■ ■ ■';
-    animation: blink 0.8s steps(1) infinite;
-  }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-  /* EQUITY BAR */
-  .equity-bar {
-    display: flex;
-    height: 32px;
-    border-radius: 2px;
-    overflow: hidden;
-    margin: 16px 0 8px;
-  }
-  .eq-win  { background: var(--win); transition: width 0.5s ease; }
-  .eq-tie  { background: var(--tie); transition: width 0.5s ease; }
-  .eq-lose { background: var(--lose); transition: width 0.5s ease; }
-  .equity-labels {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--mono);
-    font-size: 12px;
-  }
-  .equity-labels .win-label { color: var(--win); }
-  .equity-labels .tie-label { color: var(--tie); }
-  .equity-labels .lose-label { color: var(--lose); }
-
-  /* HAND BADGE */
-  .hand-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 2px;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 1px;
-    margin-right: 8px;
-  }
-  .hb-win  { background: rgba(57,255,20,0.1);  color: var(--win);  border: 1px solid var(--win); }
-  .hb-lose { background: rgba(255,45,85,0.1);  color: var(--lose); border: 1px solid var(--lose); }
-  .hb-tie  { background: rgba(255,214,10,0.1); color: var(--tie);  border: 1px solid var(--tie); }
-  .hb-info { background: rgba(0,229,255,0.1);  color: var(--accent2); border: 1px solid var(--accent2); }
-
-  /* SQUID GAME MARKERS */
-  .marker-grid {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin: 12px 0;
-  }
-  .marker {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 2px solid var(--border);
-    background: var(--bg);
-  }
-  .marker.has-marker { border-color: var(--accent3); box-shadow: 0 0 12px rgba(57,255,20,0.4); }
-  .marker.no-marker  { border-color: var(--muted); opacity: 0.5; }
-  .marker.selected   { border-color: var(--accent2); box-shadow: 0 0 12px rgba(0,229,255,0.4); }
-
-  /* RECOMMENDATION */
-  .recommendation {
-    padding: 16px 20px;
-    border-radius: 2px;
-    margin-top: 16px;
-    border-left: 4px solid;
-    font-size: 13px;
-    line-height: 1.6;
-  }
-  .rec-show  { border-color: var(--win);  background: rgba(57,255,20,0.06); }
-  .rec-muck  { border-color: var(--lose); background: rgba(255,45,85,0.06); }
-  .rec-title { font-family: var(--display); font-size: 20px; letter-spacing: 1px; margin-bottom: 6px; }
-
-  /* RIGHT SIDEBAR - LOG */
-  .sidebar {
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-  }
-  .sidebar-header {
-    padding: 16px 20px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .log-clear {
-    cursor: pointer;
-    color: var(--muted);
-    font-size: 11px;
-    transition: color 0.2s;
-  }
-  .log-clear:hover { color: var(--accent); }
-  .log-entries {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-  .log-entry {
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    border-radius: 2px;
-    font-family: var(--mono);
-    font-size: 11px;
-    line-height: 1.5;
-    animation: slideIn 0.2s ease;
-    border-left: 3px solid;
-  }
-  @keyframes slideIn { from { opacity:0; transform: translateX(8px); } to { opacity:1; transform: none; } }
-  .log-entry.info  { border-color: var(--accent2); background: rgba(0,229,255,0.05); color: var(--accent2); }
-  .log-entry.ok    { border-color: var(--win); background: rgba(57,255,20,0.05); color: var(--win); }
-  .log-entry.err   { border-color: var(--lose); background: rgba(255,45,85,0.05); color: var(--lose); }
-  .log-entry.warn  { border-color: var(--tie); background: rgba(255,214,10,0.05); color: var(--tie); }
-  .log-time { opacity: 0.5; margin-right: 6px; }
-
-  .divider { height: 1px; background: var(--border); margin: 20px 0; }
-
-  /* WS DEMO */
-  .ws-demo {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    padding: 16px;
-    border-radius: 2px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    line-height: 1.8;
-  }
-  .ws-demo .key { color: var(--accent2); }
-  .ws-demo .val { color: var(--accent3); }
-  .ws-demo .str { color: var(--tie); }
+/* player tendency */
+.ptable{width:100%;border-collapse:collapse}
+.ptable th{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
+.ptable td{padding:8px 10px;border-bottom:1px solid rgba(30,30,40,.5);font-size:12px}
+.ptable tr:hover td{background:rgba(255,255,255,.02)}
+select.sm{padding:4px 8px;font-size:11px}
 </style>
 </head>
 <body>
@@ -385,588 +133,838 @@
 <header>
   <div class="logo">🦑 SQUID <span>POKER</span> SOLVER</div>
   <div class="status">
-    <div class="status-dot" id="statusDot"></div>
-    <span id="statusText">DISCONNECTED</span>
+    <div class="dot" id="dot"></div>
+    <span id="stxt">DISCONNECTED</span>
     <span style="color:var(--border)">|</span>
-    <span id="wsUrl" style="color:var(--border)">ws://localhost:8080/ws</span>
+    <span style="color:var(--border)" id="wsurl"></span>
   </div>
 </header>
 
 <div class="layout">
+<nav>
+  <div class="ns">Hand Tools</div>
+  <div class="ni active" onclick="show('hand-eval',this)"><span class="ni-icon">🃏</span>Hand Evaluator</div>
+  <div class="ni" onclick="show('equity',this)"><span class="ni-icon">📊</span>Equity Calc</div>
+  <div class="ni" onclick="show('range-equity',this)"><span class="ni-icon">📐</span>Range vs Range</div>
+  <div class="ni" onclick="show('multiway',this)"><span class="ni-icon">🔺</span>Multi-Way Equity</div>
+  <div class="ni" onclick="show('compare',this)"><span class="ni-icon">⚔️</span>Compare Hands</div>
+  <div class="ns">Betting</div>
+  <div class="ni" onclick="show('bet-sizing',this)"><span class="ni-icon">💸</span>Bet Sizing</div>
+  <div class="ni" onclick="show('three-bet',this)"><span class="ni-icon">3️⃣</span>3-Bet Advisor</div>
+  <div class="ni" onclick="show('bluff-freq',this)"><span class="ni-icon">🎭</span>Bluff Frequency</div>
+  <div class="ns">Squid Game</div>
+  <div class="ni" onclick="show('show-muck',this)"><span class="ni-icon">👁️</span>Show / Muck</div>
+  <div class="ni" onclick="show('aggression',this)"><span class="ni-icon">⚡</span>Aggression</div>
+  <div class="ni" onclick="show('penalty-be',this)"><span class="ni-icon">💀</span>Penalty Breakeven</div>
+  <div class="ni" onclick="show('orbit-sim',this)"><span class="ni-icon">🔄</span>Orbit Simulator</div>
+  <div class="ni" onclick="show('orbit-ev',this)"><span class="ni-icon">💰</span>Orbit EV</div>
+  <div class="ni" onclick="show('position',this)"><span class="ni-icon">📍</span>Position Tracker</div>
+  <div class="ni" onclick="show('last-marker',this)"><span class="ni-icon">🚨</span>Last Marker Alert</div>
+  <div class="ns">Players</div>
+  <div class="ni" onclick="show('player-profiles',this)"><span class="ni-icon">👤</span>Player Profiles</div>
+  <div class="ni" onclick="show('tells',this)"><span class="ni-icon">🔍</span>Tells Tracker</div>
+</nav>
 
-  <!-- LEFT NAV -->
-  <nav class="nav">
-    <div class="nav-section">Engine</div>
-    <div class="nav-item active" onclick="showPanel('hand-eval')">
-      <span class="nav-icon">🃏</span> Hand Evaluator
-    </div>
-    <div class="nav-item" onclick="showPanel('equity')">
-      <span class="nav-icon">📊</span> Equity Calculator
-    </div>
-    <div class="nav-item" onclick="showPanel('compare')">
-      <span class="nav-icon">⚔️</span> Compare Hands
-    </div>
-    <div class="nav-section" style="margin-top:16px">Squid Game</div>
-    <div class="nav-item" onclick="showPanel('show-muck')">
-      <span class="nav-icon">👁️</span> Show / Muck
-    </div>
-    <div class="nav-item" onclick="showPanel('aggression')">
-      <span class="nav-icon">⚡</span> Aggression Advisor
-    </div>
-    <div class="nav-item" onclick="showPanel('orbit-ev')">
-      <span class="nav-icon">💰</span> Orbit EV
-    </div>
-    <div class="nav-section" style="margin-top:16px">Info</div>
-    <div class="nav-item" onclick="showPanel('protocol')">
-      <span class="nav-icon">🔌</span> WS Protocol
-    </div>
-  </nav>
+<main>
 
-  <!-- MAIN CONTENT -->
-  <main class="main">
+<!-- HAND EVAL -->
+<div class="panel active" id="panel-hand-eval">
+  <div class="ptitle">HAND EVALUATOR</div>
+  <div class="psub">Evaluate any 5–7 card hand</div>
+  <div class="card">
+    <label>Cards (space separated)</label>
+    <input id="ev-cards" placeholder="Ah Kd Qc Jh Ts" value="Ah Kd Qc Jh Ts">
+    <div class="hint">Ranks: 2-9 T J Q K A &nbsp;|&nbsp; Suits: c d h s</div>
+    <button onclick="evalHand()">EVALUATE</button>
+  </div>
+  <div class="card"><div class="ctitle">Result</div><div class="rbox" id="ev-result">Awaiting input...</div></div>
+</div>
 
-    <!-- HAND EVAL -->
-    <div class="panel active" id="panel-hand-eval">
-      <div class="panel-title">HAND EVALUATOR</div>
-      <div class="panel-subtitle">Evaluate any 5–7 card poker hand</div>
-      <div class="card">
-        <div class="card-title">Input Cards</div>
-        <label>Cards (space separated, e.g. Ah Kd Qc Jh Ts)</label>
-        <input id="eval-cards" type="text" placeholder="Ah Kd Qc Jh Ts" value="Ah Kd Qc Jh Ts">
-        <div style="margin-top:10px; font-size:12px; color:var(--muted); font-family:var(--mono)">
-          Ranks: 2-9, T, J, Q, K, A &nbsp;|&nbsp; Suits: c d h s
-        </div>
-        <button onclick="evalHand()">EVALUATE HAND</button>
+<!-- EQUITY -->
+<div class="panel" id="panel-equity">
+  <div class="ptitle">EQUITY CALCULATOR</div>
+  <div class="psub">Head-up Monte Carlo win probability</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Player 1 Hole Cards</label><input id="eq1" placeholder="Ah Kd" value="Ah Kd"></div>
+      <div><label>Player 2 Hole Cards</label><input id="eq2" placeholder="Qc Jh" value="Qc Jh"></div>
+    </div>
+    <label>Board (blank = preflop)</label><input id="eqb" placeholder="2c 7h Ks (optional)">
+    <label>Simulations</label><input id="eqs" type="number" value="20000">
+    <button onclick="calcEquity()">RUN SIMULATION</button>
+  </div>
+  <div class="card">
+    <div class="ctitle">Equity</div>
+    <div class="ebar"><div class="ew" id="ew" style="width:0%"></div><div class="et" id="et" style="width:0%"></div><div class="el" id="el" style="width:0%"></div></div>
+    <div class="elabels"><span class="wl" id="ewp">WIN: —</span><span class="tl" id="etp">TIE: —</span><span class="ll" id="elp">LOSE: —</span></div>
+  </div>
+</div>
+
+<!-- RANGE EQUITY -->
+<div class="panel" id="panel-range-equity">
+  <div class="ptitle">RANGE VS RANGE</div>
+  <div class="psub">Equity across entire hand ranges</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Range 1</label><input id="rr1" placeholder="QQ+,AKs,AKo" value="QQ+,AKs,AKo"></div>
+      <div><label>Range 2</label><input id="rr2" placeholder="JJ+,AQs+,AQo+" value="JJ+,AQs+,AQo+"></div>
+    </div>
+    <label>Board (optional)</label><input id="rrb" placeholder="2c 7h Ks">
+    <label>Sims Per Combo</label><input id="rrs" type="number" value="200">
+    <div class="hint">Notation: AA KK+ AKs AKo AK QQ+ ATs+ JTs (comma or space separated)</div>
+    <button onclick="calcRangeEquity()">CALCULATE RANGE EQUITY</button>
+  </div>
+  <div class="card">
+    <div class="ctitle">Range Equity Result</div>
+    <div class="ebar"><div class="ew" id="rrew" style="width:0%"></div><div class="et" id="rret" style="width:0%"></div><div class="el" id="rrel" style="width:0%"></div></div>
+    <div class="elabels"><span class="wl" id="rrwp">RANGE 1: —</span><span class="tl" id="rrtp">TIE: —</span><span class="ll" id="rrlp">RANGE 2: —</span></div>
+    <div class="rbox" id="rr-result" style="margin-top:14px">Awaiting input...</div>
+  </div>
+</div>
+
+<!-- MULTIWAY -->
+<div class="panel" id="panel-multiway">
+  <div class="ptitle">MULTI-WAY EQUITY</div>
+  <div class="psub">3+ player equity calculation</div>
+  <div class="card">
+    <label>Player Hands (one per line)</label>
+    <textarea id="mw-hands" rows="4" placeholder="Ah Kd&#10;Qc Jh&#10;2c 2d">Ah Kd
+Qc Jh
+2c 2d</textarea>
+    <label>Board (optional)</label><input id="mw-board" placeholder="Ts 9c 3h">
+    <label>Simulations</label><input id="mw-sims" type="number" value="10000">
+    <button onclick="calcMultiway()">CALCULATE</button>
+  </div>
+  <div class="card"><div class="ctitle">Results</div><div id="mw-bars"></div></div>
+</div>
+
+<!-- COMPARE -->
+<div class="panel" id="panel-compare">
+  <div class="ptitle">COMPARE HANDS</div>
+  <div class="psub">Head-to-head showdown comparison</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Hand 1</label><input id="ch1" placeholder="Ah Kd Qc Jh Ts" value="Ah Kd Qc Jh Ts"></div>
+      <div><label>Hand 2</label><input id="ch2" placeholder="2c 2d 2h 3c 3d" value="2c 2d 2h 3c 3d"></div>
+    </div>
+    <button onclick="compareHands()">COMPARE</button>
+  </div>
+  <div class="card"><div class="ctitle">Result</div><div class="rbox" id="cmp-result">Awaiting input...</div></div>
+</div>
+
+<!-- BET SIZING -->
+<div class="panel" id="panel-bet-sizing">
+  <div class="ptitle">BET SIZING</div>
+  <div class="psub">Optimal bet size with Squid Game overlay</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Hole Cards</label><input id="bs-hole" placeholder="Ah Kd" value="Ah Kd"></div>
+      <div><label>Board</label><input id="bs-board" placeholder="2c 7h Ks (blank=preflop)"></div>
+    </div>
+    <div class="row4">
+      <div><label>Street</label>
+        <select id="bs-street"><option value="0">Preflop</option><option value="1" selected>Flop</option><option value="2">Turn</option><option value="3">River</option></select>
       </div>
-      <div class="card">
-        <div class="card-title">Result</div>
-        <div class="result-box" id="eval-result">Awaiting input...</div>
+      <div><label>Pot Size</label><input id="bs-pot" type="number" value="400"></div>
+      <div><label>Stack Size</label><input id="bs-stack" type="number" value="2000"></div>
+      <div><label>Facing Bet</label><input id="bs-facing" type="number" value="0"></div>
+    </div>
+    <div class="row2">
+      <div><label>Position</label>
+        <select id="bs-pos"><option value="1">In Position</option><option value="0">Out of Position</option></select>
+      </div>
+      <div><label>BB Size</label><input id="bs-bb" type="number" value="50"></div>
+    </div>
+    <div class="divider"></div>
+    <label style="color:var(--accent3)">🦑 Squid Game Overlay</label>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <input type="checkbox" id="bs-squid" style="width:auto">
+      <span style="font-size:12px;color:var(--muted)">Active Squid Game orbit</span>
+    </div>
+    <button onclick="recommendBet()">GET RECOMMENDATION</button>
+  </div>
+  <div class="card"><div class="ctitle">Recommendation</div><div class="rbox" id="bs-result">Awaiting input...</div></div>
+</div>
+
+<!-- 3-BET -->
+<div class="panel" id="panel-three-bet">
+  <div class="ptitle">3-BET ADVISOR</div>
+  <div class="psub">3-bet / call / fold decision — with Squid Game adjustment</div>
+  <div class="card">
+    <div class="row3">
+      <div><label>Pot Size</label><input id="tb-pot" type="number" value="150"></div>
+      <div><label>Stack Size</label><input id="tb-stack" type="number" value="2000"></div>
+      <div><label>Open Raise Size</label><input id="tb-open" type="number" value="75"></div>
+    </div>
+    <label>Hand Strength (0–100%)</label>
+    <input id="tb-strength" type="range" min="0" max="100" value="70" oninput="document.getElementById('tb-strength-val').textContent=this.value+'%'" style="padding:0">
+    <div style="font-family:var(--mono);font-size:13px;color:var(--accent2);margin-top:4px" id="tb-strength-val">70%</div>
+    <div class="divider"></div>
+    <label style="color:var(--accent3)">🦑 Squid Game</label>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <input type="checkbox" id="tb-squid" style="width:auto">
+      <span style="font-size:12px;color:var(--muted)">Active orbit (needs marker)</span>
+    </div>
+    <button onclick="analyze3Bet()">ANALYZE</button>
+  </div>
+  <div class="card"><div class="ctitle">Decision</div><div id="tb-result"></div></div>
+</div>
+
+<!-- BLUFF FREQ -->
+<div class="panel" id="panel-bluff-freq">
+  <div class="ptitle">BLUFF FREQUENCY</div>
+  <div class="psub">GTO bluff % — adjusted for Squid Game show rule</div>
+  <div class="card">
+    <div class="row3">
+      <div><label>Pot Size</label><input id="bf-pot" type="number" value="500"></div>
+      <div><label>Stack Size</label><input id="bf-stack" type="number" value="2000"></div>
+      <div><label>Street</label>
+        <select id="bf-street"><option value="0">Preflop</option><option value="1">Flop</option><option value="2">Turn</option><option value="3" selected>River</option></select>
       </div>
     </div>
-
-    <!-- EQUITY -->
-    <div class="panel" id="panel-equity">
-      <div class="panel-title">EQUITY CALCULATOR</div>
-      <div class="panel-subtitle">Monte Carlo win probability — hole cards vs hole cards</div>
-      <div class="card">
-        <div class="card-title">Hole Cards</div>
-        <div class="row">
-          <div>
-            <label>Player 1 Hole Cards</label>
-            <input id="eq-hole1" type="text" placeholder="Ah Kd" value="Ah Kd">
-          </div>
-          <div>
-            <label>Player 2 Hole Cards</label>
-            <input id="eq-hole2" type="text" placeholder="Qc Jh" value="Qc Jh">
-          </div>
-        </div>
-        <label>Board (leave blank for preflop)</label>
-        <input id="eq-board" type="text" placeholder="2c 7h Ks (optional)">
-        <label>Simulations</label>
-        <input id="eq-sims" type="number" value="20000" min="1000" max="500000">
-        <button onclick="calcEquity()">RUN EQUITY SIMULATION</button>
-      </div>
-      <div class="card">
-        <div class="card-title">Equity Result</div>
-        <div class="equity-bar">
-          <div class="eq-win"  id="eq-bar-win"  style="width:0%"></div>
-          <div class="eq-tie"  id="eq-bar-tie"  style="width:0%"></div>
-          <div class="eq-lose" id="eq-bar-lose" style="width:0%"></div>
-        </div>
-        <div class="equity-labels">
-          <span class="win-label" id="eq-win-pct">WIN: —</span>
-          <span class="tie-label" id="eq-tie-pct">TIE: —</span>
-          <span class="lose-label" id="eq-lose-pct">LOSE: —</span>
-        </div>
+    <div class="row3">
+      <div><label>Value Combos</label><input id="bf-val" type="number" value="12"></div>
+      <div><label>Bluff Combos Available</label><input id="bf-bluff" type="number" value="20"></div>
+      <div><label>Position</label>
+        <select id="bf-pos"><option value="1">In Position</option><option value="0">Out of Position</option></select>
       </div>
     </div>
+    <div class="divider"></div>
+    <label style="color:var(--accent3)">🦑 Squid Game</label>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <input type="checkbox" id="bf-squid" style="width:auto">
+      <span style="font-size:12px;color:var(--muted)">Needs marker (penalizes bluffing)</span>
+    </div>
+    <button onclick="getBluffFreq()">CALCULATE</button>
+  </div>
+  <div class="card"><div class="ctitle">Result</div><div class="rbox" id="bf-result">Awaiting input...</div></div>
+</div>
 
-    <!-- COMPARE -->
-    <div class="panel" id="panel-compare">
-      <div class="panel-title">COMPARE HANDS</div>
-      <div class="panel-subtitle">Head-to-head hand comparison at showdown</div>
-      <div class="card">
-        <div class="row">
-          <div>
-            <label>Hand 1 (5 cards)</label>
-            <input id="cmp-h1" type="text" placeholder="Ah Kd Qc Jh Ts" value="Ah Kd Qc Jh Ts">
-          </div>
-          <div>
-            <label>Hand 2 (5 cards)</label>
-            <input id="cmp-h2" type="text" placeholder="2c 2d 2h 3c 3d" value="2c 2d 2h 3c 3d">
-          </div>
-        </div>
-        <button onclick="compareHands()">COMPARE HANDS</button>
+<!-- SHOW/MUCK -->
+<div class="panel" id="panel-show-muck">
+  <div class="ptitle">SHOW / MUCK ADVISOR</div>
+  <div class="psub">Should you show your hand to claim a marker?</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Number of Players</label><input id="sm-n" type="number" value="6" min="2" max="10" oninput="buildMarkerGrid('sm')"></div>
+      <div><label>Total Markers</label><input id="sm-m" type="number" value="5" min="1" max="9" oninput="buildMarkerGrid('sm')"></div>
+    </div>
+    <label>Who Has a Marker? (click to toggle)</label>
+    <div class="mgrid" id="sm-grid"></div>
+    <div class="row2">
+      <div><label>Penalty Per Player</label><input id="sm-pen" type="number" value="500"></div>
+      <div><label>Hands Remaining</label><input id="sm-hands" type="number" value="4" min="1"></div>
+    </div>
+    <div class="row2">
+      <div><label>Your Player Index</label><input id="sm-idx" type="number" value="0" min="0"></div>
+      <div><label>Current Pot Size</label><input id="sm-pot" type="number" value="1200"></div>
+    </div>
+    <button onclick="analyzeShow()">ANALYZE DECISION</button>
+  </div>
+  <div class="card" id="sm-card" style="display:none">
+    <div class="ctitle">Recommendation</div>
+    <div id="sm-rec"></div>
+  </div>
+</div>
+
+<!-- AGGRESSION -->
+<div class="panel" id="panel-aggression">
+  <div class="ptitle">AGGRESSION ADVISOR</div>
+  <div class="psub">How marker pressure should change your bet sizing</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Players</label><input id="ag-n" type="number" value="6"></div>
+      <div><label>Total Markers</label><input id="ag-m" type="number" value="5"></div>
+    </div>
+    <div class="row2">
+      <div><label>Penalty</label><input id="ag-pen" type="number" value="500"></div>
+      <div><label>Hands Remaining</label><input id="ag-hands" type="number" value="4"></div>
+    </div>
+    <label>Has Marker (comma sep: true,false,...)</label>
+    <input id="ag-markers" value="true,false,false,false,false,false">
+    <label>Your Player Index</label>
+    <input id="ag-idx" type="number" value="1">
+    <button onclick="analyzeAggression()">GET ADVICE</button>
+  </div>
+  <div class="card"><div class="ctitle">Result</div><div class="rbox" id="ag-result">Awaiting input...</div></div>
+</div>
+
+<!-- PENALTY BREAKEVEN -->
+<div class="panel" id="panel-penalty-be">
+  <div class="ptitle">PENALTY BREAKEVEN</div>
+  <div class="psub">At what stack depth does the penalty stop mattering?</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Your Stack Size</label><input id="pb-stack" type="number" value="2000"></div>
+      <div><label>Penalty Amount</label><input id="pb-pen" type="number" value="500"></div>
+    </div>
+    <div class="row2">
+      <div><label>Number of Markers</label><input id="pb-markers" type="number" value="5"></div>
+      <div><label>Number of Players</label><input id="pb-players" type="number" value="6"></div>
+    </div>
+    <button onclick="penaltyBreakeven()">CALCULATE</button>
+  </div>
+  <div class="card"><div class="ctitle">Analysis</div><div class="rbox" id="pb-result">Awaiting input...</div></div>
+</div>
+
+<!-- ORBIT SIMULATOR -->
+<div class="panel" id="panel-orbit-sim">
+  <div class="ptitle">ORBIT SIMULATOR</div>
+  <div class="psub">Monte Carlo simulation of a full orbit — chip delta & marker claim rates</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Players</label><input id="os-n" type="number" value="6"></div>
+      <div><label>Total Markers</label><input id="os-m" type="number" value="5"></div>
+    </div>
+    <div class="row2">
+      <div><label>Penalty</label><input id="os-pen" type="number" value="500"></div>
+      <div><label>Hands Remaining</label><input id="os-hands" type="number" value="6"></div>
+    </div>
+    <label>Has Marker (comma sep)</label>
+    <input id="os-markers" value="false,false,false,false,false,false">
+    <label>Simulations</label>
+    <input id="os-sims" type="number" value="10000">
+    <button onclick="simulateOrbit()">RUN SIMULATION</button>
+  </div>
+  <div class="card">
+    <div class="ctitle">Marker Claim Rate per Player</div>
+    <div id="os-claim-bars"></div>
+    <div class="divider"></div>
+    <div class="ctitle">Average Chip Delta per Player</div>
+    <div id="os-delta-bars"></div>
+  </div>
+</div>
+
+<!-- ORBIT EV -->
+<div class="panel" id="panel-orbit-ev">
+  <div class="ptitle">ORBIT EV</div>
+  <div class="psub">Expected chip value for each player over the remaining orbit</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Players</label><input id="oe-n" type="number" value="6"></div>
+      <div><label>Total Markers</label><input id="oe-m" type="number" value="5"></div>
+    </div>
+    <div class="row2">
+      <div><label>Penalty</label><input id="oe-pen" type="number" value="500"></div>
+      <div><label>Hands Remaining</label><input id="oe-hands" type="number" value="4"></div>
+    </div>
+    <label>Has Marker (comma sep)</label>
+    <input id="oe-markers" value="true,false,false,false,false,false">
+    <button onclick="calcOrbitEV()">CALCULATE</button>
+  </div>
+  <div class="card"><div class="ctitle">Player EVs</div><div id="oe-bars"></div></div>
+</div>
+
+<!-- POSITION TRACKER -->
+<div class="panel" id="panel-position">
+  <div class="ptitle">POSITION TRACKER</div>
+  <div class="psub">Track button position and hands remaining in the orbit</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Players</label><input id="pt-n" type="number" value="6"></div>
+      <div><label>Total Markers</label><input id="pt-m" type="number" value="5"></div>
+    </div>
+    <div class="row2">
+      <div><label>Penalty</label><input id="pt-pen" type="number" value="500"></div>
+      <div><label>Hands Remaining</label><input id="pt-hands" type="number" value="4"></div>
+    </div>
+    <label>Has Marker (comma sep)</label>
+    <input id="pt-markers" value="true,false,false,false,false,false">
+    <div class="row3">
+      <div><label>Button Position (0-based)</label><input id="pt-btn" type="number" value="2"></div>
+      <div><label>Total Hands in Orbit</label><input id="pt-total" type="number" value="6"></div>
+      <div><label>Current Hand #</label><input id="pt-current" type="number" value="3"></div>
+    </div>
+    <button onclick="trackPosition()">TRACK</button>
+  </div>
+  <div class="card"><div class="ctitle">Position Info</div><div class="rbox" id="pt-result">Awaiting input...</div></div>
+</div>
+
+<!-- LAST MARKER ALERT -->
+<div class="panel" id="panel-last-marker">
+  <div class="ptitle">LAST MARKER ALERT</div>
+  <div class="psub">Strategy when only one marker slot remains</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Players</label><input id="lm-n" type="number" value="6" oninput="buildMarkerGrid('lm')"></div>
+      <div><label>Total Markers</label><input id="lm-m" type="number" value="5"></div>
+    </div>
+    <label>Who Has a Marker?</label>
+    <div class="mgrid" id="lm-grid"></div>
+    <div class="row2">
+      <div><label>Penalty</label><input id="lm-pen" type="number" value="500"></div>
+      <div><label>Hands Remaining</label><input id="lm-hands" type="number" value="3"></div>
+    </div>
+    <button onclick="checkLastMarker()">CHECK SITUATION</button>
+  </div>
+  <div class="card" id="lm-card" style="display:none">
+    <div id="lm-result"></div>
+  </div>
+</div>
+
+<!-- PLAYER PROFILES -->
+<div class="panel" id="panel-player-profiles">
+  <div class="ptitle">PLAYER PROFILES</div>
+  <div class="psub">Track tendencies of players at your table (resets on refresh)</div>
+  <div class="card">
+    <div class="row3">
+      <div><label>Player Name</label><input id="pp-name" placeholder="e.g. Seat 3"></div>
+      <div><label>Style</label>
+        <select id="pp-style">
+          <option>Tight-Passive (Nit)</option>
+          <option>Tight-Aggressive (TAG)</option>
+          <option selected>Loose-Aggressive (LAG)</option>
+          <option>Loose-Passive (Fish)</option>
+          <option>Unknown</option>
+        </select>
       </div>
-      <div class="card">
-        <div class="card-title">Result</div>
-        <div class="result-box" id="cmp-result">Awaiting input...</div>
+      <div><label>Show Tendency</label>
+        <select id="pp-show">
+          <option>Always shows value</option>
+          <option selected>Shows selectively</option>
+          <option>Never shows bluffs</option>
+          <option>Always shows</option>
+        </select>
       </div>
     </div>
+    <label>Notes</label>
+    <input id="pp-notes" placeholder="e.g. 3-bets light from BTN, always shows top pair+">
+    <button onclick="addPlayer()" class="sec">ADD PLAYER</button>
+  </div>
+  <div class="card">
+    <div class="ctitle">Player Table</div>
+    <table class="ptable">
+      <thead><tr><th>Name</th><th>Style</th><th>Show Tendency</th><th>Notes</th><th></th></tr></thead>
+      <tbody id="pp-table"></tbody>
+    </table>
+    <div id="pp-empty" style="color:var(--muted);font-family:var(--mono);font-size:12px;padding:16px 0">No players added yet</div>
+  </div>
+</div>
 
-    <!-- SHOW/MUCK -->
-    <div class="panel" id="panel-show-muck">
-      <div class="panel-title">SHOW / MUCK ADVISOR</div>
-      <div class="panel-subtitle">Should you show your hand to claim a Squid Game marker?</div>
-      <div class="card">
-        <div class="card-title">Game State</div>
-        <div class="row">
-          <div>
-            <label>Number of Players</label>
-            <input id="sm-players" type="number" value="6" min="2" max="10" oninput="updateMarkerGrid()">
-          </div>
-          <div>
-            <label>Total Markers Available</label>
-            <input id="sm-markers" type="number" value="5" min="1" max="9" oninput="updateMarkerGrid()">
-          </div>
-        </div>
-        <label>Who Already Has a Marker? (click to toggle)</label>
-        <div class="marker-grid" id="marker-grid"></div>
-        <div class="row">
-          <div>
-            <label>Penalty Per Player (chips)</label>
-            <input id="sm-penalty" type="number" value="500">
-          </div>
-          <div>
-            <label>Hands Remaining in Orbit</label>
-            <input id="sm-hands" type="number" value="4" min="1" max="20">
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label>Your Player Index (0-based)</label>
-            <input id="sm-player-idx" type="number" value="0" min="0">
-          </div>
-          <div>
-            <label>Current Pot Size (chips)</label>
-            <input id="sm-pot" type="number" value="1200">
-          </div>
-        </div>
-        <button onclick="analyzeShow()">ANALYZE SHOW/MUCK DECISION</button>
-      </div>
-      <div class="card" id="sm-result-card" style="display:none">
-        <div class="card-title">Recommendation</div>
-        <div id="sm-recommendation"></div>
+<!-- TELLS TRACKER -->
+<div class="panel" id="panel-tells">
+  <div class="ptitle">TELLS TRACKER</div>
+  <div class="psub">Log observations about opponent behavior (in-memory only)</div>
+  <div class="card">
+    <div class="row2">
+      <div><label>Player</label><input id="tell-player" placeholder="e.g. Seat 2 / John"></div>
+      <div><label>Situation</label>
+        <select id="tell-type">
+          <option>Showed hand after winning</option>
+          <option>Mucked after winning</option>
+          <option>3-bet then folded to 4-bet</option>
+          <option>Called down with weak hand</option>
+          <option>Bet large on river (bluff)</option>
+          <option>Bet large on river (value)</option>
+          <option>Checked back strong hand</option>
+          <option>Custom</option>
+        </select>
       </div>
     </div>
+    <label>Detail / Cards Shown</label>
+    <input id="tell-detail" placeholder="e.g. showed 72o after bluffing everyone off">
+    <button onclick="addTell()" class="sec">LOG TELL</button>
+  </div>
+  <div class="card">
+    <div class="ctitle">Tell Log</div>
+    <div id="tells-log" style="max-height:320px;overflow-y:auto"></div>
+    <div id="tells-empty" style="color:var(--muted);font-family:var(--mono);font-size:12px;padding:16px 0">No tells logged yet</div>
+  </div>
+</div>
 
-    <!-- AGGRESSION -->
-    <div class="panel" id="panel-aggression">
-      <div class="panel-title">AGGRESSION ADVISOR</div>
-      <div class="panel-subtitle">How the marker situation should adjust your bet sizing & hand selection</div>
-      <div class="card">
-        <div class="card-title">Game State</div>
-        <div class="row">
-          <div>
-            <label>Number of Players</label>
-            <input id="ag-players" type="number" value="6" min="2" max="10">
-          </div>
-          <div>
-            <label>Total Markers Available</label>
-            <input id="ag-markers" type="number" value="5" min="1" max="9">
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label>Penalty Per Player</label>
-            <input id="ag-penalty" type="number" value="500">
-          </div>
-          <div>
-            <label>Hands Remaining</label>
-            <input id="ag-hands" type="number" value="4" min="1" max="20">
-          </div>
-        </div>
-        <label>Has Marker (comma separated booleans, e.g. true,false,false,true,false,false)</label>
-        <input id="ag-has-marker" type="text" value="true,false,false,false,false,false">
-        <label>Your Player Index (0-based)</label>
-        <input id="ag-player-idx" type="number" value="1" min="0">
-        <button onclick="analyzeAggression()">GET AGGRESSION ADVICE</button>
-      </div>
-      <div class="card">
-        <div class="card-title">Result</div>
-        <div class="result-box" id="ag-result">Awaiting input...</div>
-      </div>
-    </div>
+</main>
 
-    <!-- ORBIT EV -->
-    <div class="panel" id="panel-orbit-ev">
-      <div class="panel-title">ORBIT EV</div>
-      <div class="panel-subtitle">Expected value for each player over the remaining orbit</div>
-      <div class="card">
-        <div class="card-title">Game State</div>
-        <div class="row">
-          <div>
-            <label>Number of Players</label>
-            <input id="oe-players" type="number" value="6" min="2" max="10">
-          </div>
-          <div>
-            <label>Total Markers</label>
-            <input id="oe-markers" type="number" value="5" min="1" max="9">
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <label>Penalty Per Player</label>
-            <input id="oe-penalty" type="number" value="500">
-          </div>
-          <div>
-            <label>Hands Remaining</label>
-            <input id="oe-hands" type="number" value="4" min="1" max="20">
-          </div>
-        </div>
-        <label>Has Marker (comma separated)</label>
-        <input id="oe-has-marker" type="text" value="true,false,false,false,false,false">
-        <button onclick="calcOrbitEV()">CALCULATE ORBIT EV</button>
-      </div>
-      <div class="card">
-        <div class="card-title">Player EVs</div>
-        <div id="oe-bars"></div>
-      </div>
-    </div>
-
-    <!-- WS PROTOCOL -->
-    <div class="panel" id="panel-protocol">
-      <div class="panel-title">WEBSOCKET PROTOCOL</div>
-      <div class="panel-subtitle">Message format for the Go WebSocket server</div>
-      <div class="card">
-        <div class="card-title">Evaluate Hand</div>
-        <div class="ws-demo">
-<span class="key">{</span><br>
-&nbsp;&nbsp;<span class="key">"action"</span>: <span class="str">"eval_hand"</span>,<br>
-&nbsp;&nbsp;<span class="key">"data"</span>: { <span class="key">"cards"</span>: <span class="str">"Ah Kd Qc Jh Ts"</span> }<br>
-<span class="key">}</span>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Calculate Equity</div>
-        <div class="ws-demo">
-<span class="key">{</span><br>
-&nbsp;&nbsp;<span class="key">"action"</span>: <span class="str">"calc_equity"</span>,<br>
-&nbsp;&nbsp;<span class="key">"data"</span>: {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"hole1"</span>: <span class="str">"Ah Kd"</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"hole2"</span>: <span class="str">"Qc Jh"</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"board"</span>: <span class="str">"2c 7h Ks"</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"simulations"</span>: <span class="val">20000</span><br>
-&nbsp;&nbsp;}<br>
-<span class="key">}</span>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Show/Muck Decision</div>
-        <div class="ws-demo">
-<span class="key">{</span><br>
-&nbsp;&nbsp;<span class="key">"action"</span>: <span class="str">"analyze_show"</span>,<br>
-&nbsp;&nbsp;<span class="key">"data"</span>: {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"state"</span>: {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"num_players"</span>: <span class="val">6</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"num_markers"</span>: <span class="val">5</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"has_marker"</span>: [<span class="val">true</span>,<span class="val">false</span>,<span class="val">false</span>,<span class="val">false</span>,<span class="val">false</span>,<span class="val">false</span>],<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"stacks"</span>: [<span class="val">1000</span>,<span class="val">1000</span>,<span class="val">1000</span>,<span class="val">1000</span>,<span class="val">1000</span>,<span class="val">1000</span>],<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"penalty"</span>: <span class="val">500</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"hands_remaining"</span>: <span class="val">4</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;},<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"player_idx"</span>: <span class="val">1</span>,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"pot_size"</span>: <span class="val">1200</span><br>
-&nbsp;&nbsp;}<br>
-<span class="key">}</span>
-        </div>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- RIGHT SIDEBAR -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <span>Activity Log</span>
-      <span class="log-clear" onclick="clearLog()">CLEAR</span>
-    </div>
-    <div class="log-entries" id="logEntries"></div>
-  </aside>
-
+<aside>
+  <div class="sh"><span>Activity Log</span><span class="sc" onclick="clearLog()">CLEAR</span></div>
+  <div class="log" id="logEl"></div>
+</aside>
 </div>
 
 <script>
 // ---- State ----
 let ws = null;
-let pendingResolve = null;
-let markerStates = [];
+let pending = null;
+const markerStates = { sm: [], lm: [] };
+const players = [];
+const tells = [];
 
-// ---- WebSocket ----
-function connectWS() {
-  const url = document.getElementById('wsUrl').textContent;
-  ws = new WebSocket(url);
-  ws.onopen = () => {
-    setStatus(true);
-    log('info', 'Connected to solver engine');
-  };
-  ws.onclose = () => {
-    setStatus(false);
-    log('warn', 'Disconnected — retrying in 3s');
-    setTimeout(connectWS, 3000);
-  };
-  ws.onerror = () => {
-    log('err', 'WebSocket error — is the Go server running?');
-  };
-  ws.onmessage = (e) => {
-    const msg = JSON.parse(e.data);
-    if (pendingResolve) {
-      pendingResolve(msg);
-      pendingResolve = null;
-    }
-  };
+// ---- WS ----
+function getWsUrl() {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host  = window.location.host || 'localhost:8080';
+  return `${proto}//${host}/ws`;
 }
-
+function connect() {
+  const url = getWsUrl();
+  document.getElementById('wsurl').textContent = url;
+  ws = new WebSocket(url);
+  ws.onopen  = () => { setStatus(true);  lg('ok','Connected to solver engine') };
+  ws.onclose = () => { setStatus(false); lg('warn','Disconnected — retrying in 3s'); setTimeout(connect,3000) };
+  ws.onerror = () => lg('err','WebSocket error — is the Go server running?');
+  ws.onmessage = e => { const msg = JSON.parse(e.data); if(pending){pending(msg);pending=null} };
+}
+function setStatus(on) {
+  document.getElementById('dot').className = 'dot'+(on?' on':'');
+  document.getElementById('stxt').textContent = on ? 'CONNECTED' : 'DISCONNECTED';
+}
 function send(action, data) {
-  return new Promise((resolve) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      resolve({ success: false, error: 'Not connected to solver engine. Start the Go server first.' });
-      return;
-    }
-    pendingResolve = resolve;
-    ws.send(JSON.stringify({ action, data }));
+  return new Promise(resolve => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) { resolve(demo(action)); return }
+    pending = resolve;
+    ws.send(JSON.stringify({action, data}));
   });
 }
-
-// Use simulated results when server not connected (demo mode)
-function simulateResult(action, data) {
-  const demos = {
-    eval_hand: { category: 'Royal Flush', score: 90000000, description: 'Royal Flush' },
-    calc_equity: { win: 0.6712, tie: 0.0132, loss: 0.3156 },
-    compare_hands: { result: 1, hand1: 'Royal Flush', hand2: 'Full House, 2s full of 3s' },
-    analyze_show: { ev_show: 450.00, ev_muck: 280.50, should_show: true, reasoning: 'Marker EV: 450 chips. Show! Securing marker now is worth more than waiting (72% chance of getting one later).' },
-    analyze_aggression: { bet_size_multiplier: 1.2, call_threshold_adjustment: 0.05, reasoning: 'Marker competition is tight. Play slightly more aggressively to secure one.' },
-    orbit_ev: '[120.5,-80.2,45.0,-120.0,90.0,-55.3]',
-  };
-  return { success: true, data: demos[action] || { demo: true } };
+async function req(action, data) {
+  lg('info','→ '+action);
+  const r = await send(action, data);
+  if(r.success) lg('ok','← '+action); else lg('err','← '+action+': '+(r.error||''));
+  return r;
 }
 
-async function request(action, data) {
-  log('info', `→ ${action}`);
-  let result;
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    result = simulateResult(action, data);
-    log('warn', 'Demo mode (server offline)');
-  } else {
-    result = await send(action, data);
-  }
-  if (result.success) {
-    log('ok', `← ${action} OK`);
-  } else {
-    log('err', `← ${action} ERROR: ${result.error}`);
-  }
-  return result;
+// ---- Demo data ----
+function demo(action) {
+  const d = {
+    eval_hand:{category:'Royal Flush',score:90000000,description:'Royal Flush'},
+    calc_equity:{win:.6712,tie:.0132,loss:.3156},
+    range_equity:{win:.5521,tie:.0241,loss:.4238,combos_sampled:320,range1_size:18,range2_size:36},
+    compare_hands:{result:1,hand1:'Royal Flush',hand2:'Full House, 2s full of 3s'},
+    analyze_show:{ev_show:450,ev_muck:280,should_show:true,reasoning:'Show! Securing marker now is worth more than waiting (72% chance later).'},
+    analyze_aggression:{bet_size_multiplier:1.2,call_threshold_adjustment:.05,reasoning:'Marker competition tight — play more aggressively.'},
+    recommend_bet:{action:'Bet for Value',bet_amount:132,adjusted_bet:158,pot_odds:0,min_equity:.33,hand_equity:.87,squid_overlay:.04,reasoning:'Strong hand — bet 33% pot (132 chips).',squid_reasoning:'Marker overlay makes this an easy bet.'},
+    analyze_3bet:{should_3bet:false,should_call:true,should_fold:false,ev_3bet:180,ev_call:240,ev_fold:0,reasoning:'Call — good pot odds. Calling preferred over 3-betting (Squid Game: need marker at showdown).'},
+    bluff_freq:{optimal_bluff_pct:33,adjusted_for_squid:20,reasoning:'GTO bluff frequency on River: 33%. SQUID GAME: Reduce to 20% — winning without showdown means no marker.'},
+    penalty_breakeven:{breakeven_stack:25000,penalty_as_pct:12.5,is_significant:true,reasoning:'Max penalty: 2500 chips (12.5% of stack). Significant — adjust play aggressively.'},
+    simulate_orbit:{num_players:6,simulations:10000,marker_claim_rate:[.92,.71,.68,.65,.62,.58],avg_chip_delta:[320,-180,210,-220,190,-220],penalty_pay_rate:[.08,.29,.32,.35,.38,.42],chip_delta_stddev:[120,180,160,190,150,200]},
+    orbit_ev:'[120.5,-80.2,45.0,-120.0,90.0,-55.3]',
+    track_position:{btn_position:2,hands_until_end:3,current_hand:3,most_at_risk:4,summary:'Hand 3/6 | BTN: Player 2 | 3 hands left | Most at risk: Player 4'},
+    last_marker_alert:{is_active:true,players_competing:3,strategy_advice:'🚨 LAST MARKER ALERT: 3 players competing for 1 remaining marker. Each has ~33% chance. STRATEGY: Maximum aggression.'},
+    multiway_equity:'[{"win":0.4821,"tie":0.0312},{"win":0.3102,"tie":0.0312},{"win":0.1453,"tie":0.0312}]',
+  };
+  lg('warn','Demo mode (server offline)');
+  return { success:true, data: d[action]||{demo:true} };
 }
 
 // ---- Nav ----
-function showPanel(id) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('panel-' + id).classList.add('active');
-  event.currentTarget.classList.add('active');
-}
-
-// ---- Status ----
-function setStatus(connected) {
-  document.getElementById('statusDot').className = 'status-dot' + (connected ? ' connected' : '');
-  document.getElementById('statusText').textContent = connected ? 'CONNECTED' : 'DISCONNECTED';
+function show(id, el) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if(el) el.classList.add('active');
 }
 
 // ---- Log ----
-function log(type, msg) {
-  const el = document.getElementById('logEntries');
-  const time = new Date().toLocaleTimeString('en', { hour12: false });
-  const entry = document.createElement('div');
-  entry.className = `log-entry ${type}`;
-  entry.innerHTML = `<span class="log-time">${time}</span>${msg}`;
-  el.insertBefore(entry, el.firstChild);
-  if (el.children.length > 50) el.removeChild(el.lastChild);
+function lg(type, msg) {
+  const el = document.getElementById('logEl');
+  const t = new Date().toLocaleTimeString('en',{hour12:false});
+  const e = document.createElement('div');
+  e.className = 'le '+type;
+  e.innerHTML = `<span class="lt">${t}</span>${msg}`;
+  el.insertBefore(e, el.firstChild);
+  if(el.children.length > 80) el.removeChild(el.lastChild);
 }
+function clearLog(){ document.getElementById('logEl').innerHTML='' }
 
-function clearLog() {
-  document.getElementById('logEntries').innerHTML = '';
-}
-
-// ---- Marker Grid ----
-function updateMarkerGrid() {
-  const n = parseInt(document.getElementById('sm-players').value) || 6;
-  while (markerStates.length < n) markerStates.push(false);
-  markerStates = markerStates.slice(0, n);
-  const grid = document.getElementById('marker-grid');
-  grid.innerHTML = '';
-  for (let i = 0; i < n; i++) {
-    const m = document.createElement('div');
-    m.className = 'marker ' + (markerStates[i] ? 'has-marker' : 'no-marker');
-    m.title = `Player ${i}`;
-    m.textContent = markerStates[i] ? '🦑' : `P${i}`;
-    m.onclick = () => {
-      markerStates[i] = !markerStates[i];
-      updateMarkerGrid();
-    };
+// ---- Marker grids ----
+function buildMarkerGrid(prefix) {
+  const n = parseInt(document.getElementById(prefix+'-n').value)||6;
+  while(markerStates[prefix].length < n) markerStates[prefix].push(false);
+  markerStates[prefix] = markerStates[prefix].slice(0,n);
+  const grid = document.getElementById(prefix+'-grid');
+  grid.innerHTML='';
+  for(let i=0;i<n;i++){
+    const m=document.createElement('div');
+    m.className='mk '+(markerStates[prefix][i]?'has':'no');
+    m.title='Player '+i;
+    m.textContent=markerStates[prefix][i]?'🦑':'P'+i;
+    m.onclick=()=>{ markerStates[prefix][i]=!markerStates[prefix][i]; buildMarkerGrid(prefix) };
     grid.appendChild(m);
   }
 }
 
-// ---- API Calls ----
+function getStateFromGrid(prefix) {
+  const n=parseInt(document.getElementById(prefix+'-n').value)||6;
+  return {
+    num_players:n,
+    num_markers:parseInt(document.getElementById(prefix+'-m').value)||n-1,
+    has_marker:markerStates[prefix].slice(0,n),
+    stacks:Array(n).fill(1000),
+    penalty:parseInt(document.getElementById(prefix+'-pen').value)||500,
+    hands_remaining:parseInt(document.getElementById(prefix+'-hands').value)||4
+  };
+}
+
+function parseMarkerString(str, n) {
+  return str.split(',').map(s=>s.trim()==='true').slice(0,n).concat(Array(Math.max(0,n-str.split(',').length)).fill(false));
+}
+
+function getStateFromString(prefix) {
+  const n=parseInt(document.getElementById(prefix+'-n').value)||6;
+  return {
+    num_players:n,
+    num_markers:parseInt(document.getElementById(prefix+'-m').value)||n-1,
+    has_marker:parseMarkerString(document.getElementById(prefix+'-markers').value,n),
+    stacks:Array(n).fill(1000),
+    penalty:parseInt(document.getElementById(prefix+'-pen').value)||500,
+    hands_remaining:parseInt(document.getElementById(prefix+'-hands').value)||4
+  };
+}
+
+// ---- API calls ----
+
 async function evalHand() {
-  const cards = document.getElementById('eval-cards').value.trim();
-  const box = document.getElementById('eval-result');
-  box.className = 'result-box loading';
-  box.textContent = '';
-  const res = await request('eval_hand', { cards });
-  box.className = 'result-box';
-  if (res.success && res.data) {
-    const d = res.data;
-    box.innerHTML = `<span class="hand-badge hb-info">${d.category || 'RESULT'}</span>\n\n` +
-      `Category:    ${d.category || '—'}\n` +
-      `Description: ${d.description || '—'}\n` +
-      `Score:       ${d.score || '—'}`;
-  } else {
-    box.textContent = res.error || 'Error';
-  }
+  const box=document.getElementById('ev-result');
+  box.className='rbox loading'; box.textContent='';
+  const r=await req('eval_hand',{cards:document.getElementById('ev-cards').value.trim()});
+  box.className='rbox';
+  if(r.success&&r.data) {
+    const d=r.data;
+    box.innerHTML=`<span class="badge b-info">${d.category||'RESULT'}</span>\n\nDescription: ${d.description||'—'}\nScore:       ${d.score||'—'}`;
+  } else box.textContent=r.error||'Error';
 }
 
 async function calcEquity() {
-  const res = await request('calc_equity', {
-    hole1: document.getElementById('eq-hole1').value.trim(),
-    hole2: document.getElementById('eq-hole2').value.trim(),
-    board: document.getElementById('eq-board').value.trim(),
-    simulations: parseInt(document.getElementById('eq-sims').value) || 20000
-  });
-  if (res.success && res.data) {
-    const d = res.data;
-    const w = (d.win * 100).toFixed(1), t = (d.tie * 100).toFixed(1), l = (d.loss * 100).toFixed(1);
-    document.getElementById('eq-bar-win').style.width  = w + '%';
-    document.getElementById('eq-bar-tie').style.width  = t + '%';
-    document.getElementById('eq-bar-lose').style.width = l + '%';
-    document.getElementById('eq-win-pct').textContent  = `WIN: ${w}%`;
-    document.getElementById('eq-tie-pct').textContent  = `TIE: ${t}%`;
-    document.getElementById('eq-lose-pct').textContent = `LOSE: ${l}%`;
+  const r=await req('calc_equity',{hole1:document.getElementById('eq1').value.trim(),hole2:document.getElementById('eq2').value.trim(),board:document.getElementById('eqb').value.trim(),simulations:parseInt(document.getElementById('eqs').value)||20000});
+  if(r.success&&r.data) setEquityBars(r.data,'ew','et','el','ewp','etp','elp');
+}
+
+async function calcRangeEquity() {
+  const r=await req('range_equity',{range1:document.getElementById('rr1').value.trim(),range2:document.getElementById('rr2').value.trim(),board:document.getElementById('rrb').value.trim(),sims_per_combo:parseInt(document.getElementById('rrs').value)||200});
+  if(r.success&&r.data){
+    const d=r.data;
+    setEquityBars(d,'rrew','rret','rrel','rrwp','rrtp','rrlp');
+    document.getElementById('rr-result').textContent=`Range 1: ${d.range1_size||'?'} combos\nRange 2: ${d.range2_size||'?'} combos\nCombos sampled: ${d.combos_sampled||'?'}`;
+  }
+}
+
+function setEquityBars(d,wId,tId,lId,wpId,tpId,lpId) {
+  const w=(d.win*100).toFixed(1),t=(d.tie*100).toFixed(1),l=(d.loss*100).toFixed(1);
+  document.getElementById(wId).style.width=w+'%';
+  document.getElementById(tId).style.width=t+'%';
+  document.getElementById(lId).style.width=l+'%';
+  document.getElementById(wpId).textContent='WIN: '+w+'%';
+  document.getElementById(tpId).textContent='TIE: '+t+'%';
+  document.getElementById(lpId).textContent='LOSE: '+l+'%';
+}
+
+async function calcMultiway() {
+  const lines=document.getElementById('mw-hands').value.split('\n').map(l=>l.trim()).filter(Boolean);
+  const r=await req('multiway_equity',{hands:lines,board:document.getElementById('mw-board').value.trim(),simulations:parseInt(document.getElementById('mw-sims').value)||10000});
+  const c=document.getElementById('mw-bars'); c.innerHTML='';
+  if(r.success&&r.data){
+    let arr; try{ arr=typeof r.data==='string'?JSON.parse(r.data):r.data }catch(e){ arr=[] }
+    if(Array.isArray(arr)) arr.forEach((p,i)=>{
+      const w=(p.win*100).toFixed(1),t=(p.tie*100).toFixed(1);
+      c.innerHTML+=`<div class="orbit-row"><div class="orbit-label">Player ${i}</div><div class="orbit-bar-wrap"><div class="orbit-bar" style="width:${+w+'+'+parseFloat(t)/2}%;background:var(--win)"></div></div><div class="orbit-val" style="color:var(--win)">${w}%</div></div>`;
+    });
   }
 }
 
 async function compareHands() {
-  const res = await request('compare_hands', {
-    hand1: document.getElementById('cmp-h1').value.trim(),
-    hand2: document.getElementById('cmp-h2').value.trim()
-  });
-  const box = document.getElementById('cmp-result');
-  if (res.success && res.data) {
-    const d = res.data;
-    const resultLabel = d.result === 1 ? '🏆 HAND 1 WINS' : d.result === -1 ? '💀 HAND 2 WINS' : '🤝 TIE';
-    const cls = d.result === 1 ? 'hb-win' : d.result === -1 ? 'hb-lose' : 'hb-tie';
-    box.innerHTML = `<span class="hand-badge ${cls}">${resultLabel}</span>\n\n` +
-      `Hand 1: ${d.hand1 || '—'}\nHand 2: ${d.hand2 || '—'}`;
-  } else {
-    box.textContent = res.error || 'Error';
-  }
+  const r=await req('compare_hands',{hand1:document.getElementById('ch1').value.trim(),hand2:document.getElementById('ch2').value.trim()});
+  const box=document.getElementById('cmp-result');
+  if(r.success&&r.data){
+    const d=r.data;
+    const lbl=d.result===1?'🏆 HAND 1 WINS':d.result===-1?'💀 HAND 2 WINS':'🤝 TIE';
+    const cls=d.result===1?'b-ok':d.result===-1?'b-bad':'b-tie';
+    box.innerHTML=`<span class="badge ${cls}">${lbl}</span>\n\nHand 1: ${d.hand1||'—'}\nHand 2: ${d.hand2||'—'}`;
+  } else box.textContent=r.error||'Error';
 }
 
-function buildState(prefix) {
-  const n = parseInt(document.getElementById(prefix + '-players').value) || 6;
-  let hasMarker;
-  if (prefix === 'sm') {
-    hasMarker = markerStates.slice(0, n);
-    while (hasMarker.length < n) hasMarker.push(false);
-  } else {
-    const raw = document.getElementById(prefix + '-has-marker').value.split(',');
-    hasMarker = raw.map(s => s.trim() === 'true').slice(0, n);
-    while (hasMarker.length < n) hasMarker.push(false);
-  }
-  return {
-    num_players: n,
-    num_markers: parseInt(document.getElementById(prefix + '-markers').value) || n - 1,
-    has_marker: hasMarker,
-    stacks: Array(n).fill(1000),
-    penalty: parseInt(document.getElementById(prefix + '-penalty').value) || 500,
-    hands_remaining: parseInt(document.getElementById(prefix + '-hands').value) || 4
-  };
+async function recommendBet() {
+  const r=await req('recommend_bet',{
+    hole_cards:document.getElementById('bs-hole').value.trim(),
+    board:document.getElementById('bs-board').value.trim(),
+    street:parseInt(document.getElementById('bs-street').value),
+    pot_size:parseFloat(document.getElementById('bs-pot').value)||400,
+    stack_size:parseFloat(document.getElementById('bs-stack').value)||2000,
+    facing_bet:parseFloat(document.getElementById('bs-facing').value)||0,
+    bb_size:parseFloat(document.getElementById('bs-bb').value)||50,
+    in_position:document.getElementById('bs-pos').value==='1',
+    squid_active:document.getElementById('bs-squid').checked,
+    player_idx:0
+  });
+  const box=document.getElementById('bs-result');
+  if(r.success&&r.data){
+    const d=r.data;
+    box.innerHTML=`Action:          ${d.action||'—'}\nBet Amount:      ${(+d.bet_amount||0).toFixed(0)} chips\nSquid-Adj Bet:   ${(+d.adjusted_bet||0).toFixed(0)} chips\nPot Odds:        ${((+d.pot_odds||0)*100).toFixed(1)}%\nMin Equity:      ${((+d.min_equity||0)*100).toFixed(1)}%\nHand Equity:     ~${((+d.hand_equity||0)*100).toFixed(0)}%\n\nReasoning: ${d.reasoning||'—'}${d.squid_reasoning?'\nSquid: '+d.squid_reasoning:''}`;
+  } else box.textContent=r.error||'Error';
+}
+
+async function analyze3Bet() {
+  const squid=document.getElementById('tb-squid').checked;
+  const r=await req('analyze_3bet',{
+    pot_size:parseFloat(document.getElementById('tb-pot').value)||150,
+    stack_size:parseFloat(document.getElementById('tb-stack').value)||2000,
+    open_raise_size:parseFloat(document.getElementById('tb-open').value)||75,
+    hand_strength_pct:parseInt(document.getElementById('tb-strength').value)/100,
+    squid_active:squid,
+    player_idx:0
+  });
+  const c=document.getElementById('tb-result');
+  if(r.success&&r.data){
+    const d=r.data;
+    const action=d.should_3bet?'3-BET':d.should_call?'CALL':'FOLD';
+    const cls=d.should_3bet?'rec-ok':d.should_call?'rec-warn':'rec-bad';
+    c.innerHTML=`<div class="rec ${cls}"><div class="rec-title">${action}</div><div>${d.reasoning||''}</div><div class="ev-row"><span>EV 3BET: <strong style="color:var(--accent2)">${(+d.ev_3bet||0).toFixed(0)}</strong></span><span>EV CALL: <strong style="color:var(--win)">${(+d.ev_call||0).toFixed(0)}</strong></span><span>EV FOLD: <strong style="color:var(--muted)">0</strong></span></div></div>`;
+  } else c.textContent=r.error||'Error';
+}
+
+async function getBluffFreq() {
+  const r=await req('bluff_freq',{
+    pot_size:parseFloat(document.getElementById('bf-pot').value)||500,
+    stack_size:parseFloat(document.getElementById('bf-stack').value)||2000,
+    street:parseInt(document.getElementById('bf-street').value),
+    in_position:document.getElementById('bf-pos').value==='1',
+    value_combos:parseFloat(document.getElementById('bf-val').value)||12,
+    bluff_combos:parseFloat(document.getElementById('bf-bluff').value)||20,
+    squid_active:document.getElementById('bf-squid').checked,
+    player_idx:0
+  });
+  const box=document.getElementById('bf-result');
+  if(r.success&&r.data){
+    const d=r.data;
+    box.innerHTML=`GTO Bluff %:       ${(+d.optimal_bluff_pct||0).toFixed(1)}%\nSquid-Adjusted %:  ${(+d.adjusted_for_squid||0).toFixed(1)}%\n\n${d.reasoning||''}`;
+  } else box.textContent=r.error||'Error';
 }
 
 async function analyzeShow() {
-  const state = buildState('sm');
-  const res = await request('analyze_show', {
-    state,
-    player_idx: parseInt(document.getElementById('sm-player-idx').value) || 0,
-    pot_size: parseFloat(document.getElementById('sm-pot').value) || 1200
-  });
-  const card = document.getElementById('sm-result-card');
-  const rec  = document.getElementById('sm-recommendation');
-  card.style.display = 'block';
-  if (res.success && res.data) {
-    const d = res.data;
-    const cls  = d.should_show ? 'rec-show' : 'rec-muck';
-    const verb = d.should_show ? '✅ SHOW YOUR HAND' : '🚫 MUCK — STAY HIDDEN';
-    rec.innerHTML = `
-      <div class="recommendation ${cls}">
-        <div class="rec-title">${verb}</div>
-        <div>${d.reasoning || ''}</div>
-        <div style="margin-top:12px; font-family:var(--mono); font-size:12px; display:flex; gap:24px;">
-          <span>EV SHOW: <strong style="color:var(--win)">${(+d.ev_show).toFixed(0)}</strong></span>
-          <span>EV MUCK: <strong style="color:var(--lose)">${(+d.ev_muck).toFixed(0)}</strong></span>
-        </div>
-      </div>`;
-  } else {
-    rec.textContent = res.error || 'Error';
-  }
+  const state=getStateFromGrid('sm');
+  const r=await req('analyze_show',{state,player_idx:parseInt(document.getElementById('sm-idx').value)||0,pot_size:parseFloat(document.getElementById('sm-pot').value)||1200});
+  const card=document.getElementById('sm-card'); card.style.display='block';
+  const rec=document.getElementById('sm-rec');
+  if(r.success&&r.data){
+    const d=r.data;
+    const cls=d.should_show?'rec-ok':'rec-bad';
+    const verb=d.should_show?'✅ SHOW YOUR HAND':'🚫 MUCK — STAY HIDDEN';
+    rec.innerHTML=`<div class="rec ${cls}"><div class="rec-title">${verb}</div><div>${d.reasoning||''}</div><div class="ev-row"><span>EV SHOW: <strong style="color:var(--win)">${(+d.ev_show||0).toFixed(0)}</strong></span><span>EV MUCK: <strong style="color:var(--lose)">${(+d.ev_muck||0).toFixed(0)}</strong></span></div></div>`;
+  } else rec.textContent=r.error||'Error';
 }
 
 async function analyzeAggression() {
-  const state = buildState('ag');
-  const res = await request('analyze_aggression', {
-    state,
-    player_idx: parseInt(document.getElementById('ag-player-idx').value) || 0
+  const n=parseInt(document.getElementById('ag-n').value)||6;
+  const state={num_players:n,num_markers:parseInt(document.getElementById('ag-m').value)||n-1,has_marker:parseMarkerString(document.getElementById('ag-markers').value,n),stacks:Array(n).fill(1000),penalty:parseInt(document.getElementById('ag-pen').value)||500,hands_remaining:parseInt(document.getElementById('ag-hands').value)||4};
+  const r=await req('analyze_aggression',{state,player_idx:parseInt(document.getElementById('ag-idx').value)||0});
+  const box=document.getElementById('ag-result');
+  if(r.success&&r.data){
+    const d=r.data;
+    const mult=((d.bet_size_multiplier-1)*100).toFixed(0);
+    box.textContent=`Bet Size Multiplier:   ${d.bet_size_multiplier} (${mult>=0?'+':''}${mult}%)\nCall Threshold Adj:    ${d.call_threshold_adjustment>0?'+':''}${(d.call_threshold_adjustment*100).toFixed(1)}%\n\nAdvice: ${d.reasoning}`;
+  } else box.textContent=r.error||'Error';
+}
+
+async function penaltyBreakeven() {
+  const r=await req('penalty_breakeven',{
+    stack_size:parseFloat(document.getElementById('pb-stack').value)||2000,
+    penalty_amount:parseFloat(document.getElementById('pb-pen').value)||500,
+    num_markers:parseInt(document.getElementById('pb-markers').value)||5,
+    num_players:parseInt(document.getElementById('pb-players').value)||6
   });
-  const box = document.getElementById('ag-result');
-  if (res.success && res.data) {
-    const d = res.data;
-    const mult = ((d.bet_size_multiplier - 1) * 100).toFixed(0);
-    const sign = mult >= 0 ? '+' : '';
-    box.innerHTML =
-      `Bet Size Multiplier:   ${d.bet_size_multiplier} (${sign}${mult}% vs baseline)\n` +
-      `Call Threshold Adj:    ${d.call_threshold_adjustment > 0 ? '+' : ''}${(d.call_threshold_adjustment * 100).toFixed(1)}% equity required\n\n` +
-      `Advice: ${d.reasoning}`;
-  } else {
-    box.textContent = res.error || 'Error';
+  const box=document.getElementById('pb-result');
+  if(r.success&&r.data){
+    const d=r.data;
+    box.innerHTML=`Penalty as % of Stack:   ${(+d.penalty_as_pct||0).toFixed(1)}%\nBreakeven Stack (1%):    ${(+d.breakeven_stack||0).toFixed(0)} chips\nIs Significant:          ${d.is_significant?'YES — adjust play':'No — play pure poker'}\n\n${d.reasoning||''}`;
+  } else box.textContent=r.error||'Error';
+}
+
+async function simulateOrbit() {
+  const state=getStateFromString('os');
+  const r=await req('simulate_orbit',{state,simulations:parseInt(document.getElementById('os-sims').value)||10000});
+  if(r.success&&r.data){
+    const d=r.data;
+    renderOrbitBars('os-claim-bars',d.marker_claim_rate,v=>(v*100).toFixed(1)+'%','var(--accent3)','Marker Claim');
+    renderOrbitBars('os-delta-bars',d.avg_chip_delta,v=>(v>=0?'+':'')+v.toFixed(0),'','+/- chips',true);
   }
+}
+
+function renderOrbitBars(containerId, values, fmt, color, label, bipolar=false) {
+  const c=document.getElementById(containerId); c.innerHTML='';
+  if(!values) return;
+  const max=Math.max(...values.map(Math.abs),1);
+  values.forEach((v,i)=>{
+    const pct=Math.abs(v)/max*100;
+    const col=bipolar?(v>=0?'var(--win)':'var(--lose)'):(color||'var(--accent2)');
+    c.innerHTML+=`<div class="orbit-row"><div class="orbit-label">P${i}</div><div class="orbit-bar-wrap"><div class="orbit-bar" style="width:${pct}%;background:${col}"></div></div><div class="orbit-val" style="color:${col}">${fmt(v)}</div></div>`;
+  });
 }
 
 async function calcOrbitEV() {
-  const state = buildState('oe');
-  const res = await request('orbit_ev', { state });
-  const container = document.getElementById('oe-bars');
-  container.innerHTML = '';
-  if (res.success && res.data) {
-    let evs;
-    try {
-      evs = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
-    } catch(e) { evs = []; }
-
-    if (Array.isArray(evs)) {
-      const max = Math.max(...evs.map(Math.abs), 1);
-      evs.forEach((ev, i) => {
-        const positive = ev >= 0;
-        const pct = Math.abs(ev) / max * 100;
-        container.innerHTML += `
-          <div style="margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;margin-bottom:4px">
-              <span>Player ${i}</span>
-              <span style="color:${positive ? 'var(--win)' : 'var(--lose)'}">${positive ? '+' : ''}${ev.toFixed(1)}</span>
-            </div>
-            <div style="background:var(--border);height:8px;border-radius:2px;overflow:hidden">
-              <div style="width:${pct}%;height:100%;background:${positive ? 'var(--win)' : 'var(--lose)'};transition:width 0.5s ease"></div>
-            </div>
-          </div>`;
-      });
-    }
+  const state=getStateFromString('oe');
+  const r=await req('orbit_ev',{state});
+  const c=document.getElementById('oe-bars'); c.innerHTML='';
+  if(r.success&&r.data){
+    let evs; try{evs=typeof r.data==='string'?JSON.parse(r.data):r.data}catch(e){evs=[]}
+    if(Array.isArray(evs)) renderOrbitBars('oe-bars',evs,v=>(v>=0?'+':'')+v.toFixed(1),'',null,true);
   }
 }
 
+async function trackPosition() {
+  const state=getStateFromString('pt');
+  const r=await req('track_position',{state,btn_position:parseInt(document.getElementById('pt-btn').value)||0,total_hands:parseInt(document.getElementById('pt-total').value)||6,current_hand:parseInt(document.getElementById('pt-current').value)||1});
+  const box=document.getElementById('pt-result');
+  if(r.success&&r.data){
+    const d=r.data;
+    box.textContent=`${d.summary||''}\n\nButton: Player ${d.btn_position}\nHands Until End: ${d.hands_until_end}\nMost At Risk: Player ${d.most_at_risk}`;
+  } else box.textContent=r.error||'Error';
+}
+
+async function checkLastMarker() {
+  const state=getStateFromGrid('lm');
+  const r=await req('last_marker_alert',{state});
+  const card=document.getElementById('lm-card'); card.style.display='block';
+  const res=document.getElementById('lm-result');
+  if(r.success&&r.data){
+    const d=r.data;
+    if(d.is_active){
+      res.innerHTML=`<div class="alert-box"><div class="alert-title">🚨 LAST MARKER SITUATION</div><div class="alert-body">${d.strategy_advice||''}</div></div>`;
+    } else {
+      res.innerHTML=`<div class="rec rec-ok"><div class="rec-title">✅ Normal Situation</div><div>No last-marker emergency. Play your normal game.</div></div>`;
+    }
+  } else res.textContent=r.error||'Error';
+}
+
+// ---- Player Profiles ----
+function addPlayer() {
+  const name=document.getElementById('pp-name').value.trim();
+  if(!name) return;
+  players.push({name,style:document.getElementById('pp-style').value,show:document.getElementById('pp-show').value,notes:document.getElementById('pp-notes').value});
+  renderPlayers();
+  document.getElementById('pp-name').value='';
+  document.getElementById('pp-notes').value='';
+  lg('ok','Player added: '+name);
+}
+function removePlayer(i){ players.splice(i,1); renderPlayers() }
+function renderPlayers(){
+  const tb=document.getElementById('pp-table'); tb.innerHTML='';
+  document.getElementById('pp-empty').style.display=players.length?'none':'block';
+  players.forEach((p,i)=>{ tb.innerHTML+=`<tr><td>${p.name}</td><td><span class="badge b-info">${p.style.split('(')[0].trim()}</span></td><td style="font-size:11px;color:var(--muted)">${p.show}</td><td style="font-size:11px;color:var(--muted)">${p.notes||'—'}</td><td><span style="cursor:pointer;color:var(--lose)" onclick="removePlayer(${i})">✕</span></td></tr>` });
+}
+
+// ---- Tells ----
+function addTell(){
+  const player=document.getElementById('tell-player').value.trim();
+  const type=document.getElementById('tell-type').value;
+  const detail=document.getElementById('tell-detail').value.trim();
+  if(!player) return;
+  const tell={player,type,detail,time:new Date().toLocaleTimeString('en',{hour12:false})};
+  tells.unshift(tell);
+  renderTells();
+  document.getElementById('tell-detail').value='';
+  lg('ok','Tell logged: '+player);
+}
+function renderTells(){
+  const c=document.getElementById('tells-log'); c.innerHTML='';
+  document.getElementById('tells-empty').style.display=tells.length?'none':'block';
+  tells.forEach(t=>{
+    c.innerHTML+=`<div style="padding:10px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--accent2);font-family:var(--mono);font-size:12px">${t.player}</span><span style="color:var(--muted);font-family:var(--mono);font-size:10px">${t.time}</span></div><div style="font-size:12px;color:var(--text)">${t.type}</div>${t.detail?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${t.detail}</div>`:''}</div>`;
+  });
+}
+
 // ---- Init ----
-updateMarkerGrid();
-log('info', 'Solver UI loaded');
-log('warn', 'Start Go server: cd go && go run main.go');
-connectWS();
+buildMarkerGrid('sm');
+buildMarkerGrid('lm');
+lg('info','Solver UI loaded — '+new Date().toLocaleDateString());
+lg('warn','Run: cd go && go run main.go');
+connect();
 </script>
 </body>
 </html>

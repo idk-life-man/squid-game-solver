@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"squid-poker-solver/server"
 )
 
 func main() {
-	port := "8080"
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 
 	// WebSocket endpoint
 	http.HandleFunc("/ws", server.Handler)
@@ -20,7 +24,7 @@ func main() {
 	})
 
 	// Serve static client files
-	http.Handle("/", http.FileServer(http.Dir("../client")))
+	http.Handle("/", http.FileServer(http.Dir("./client")))
 
 	log.Printf("🦑 Squid Poker Solver running on http://localhost:%s", port)
 	log.Printf("   WebSocket: ws://localhost:%s/ws", port)

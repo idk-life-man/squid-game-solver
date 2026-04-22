@@ -1,0 +1,18 @@
+# C++ build artifacts
+cpp/build/
+*.dll
+*.so
+*.dylib
+*.o
+*.a
+
+# Go build artifacts
+go/server
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
