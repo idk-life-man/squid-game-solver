@@ -1,2 +1,0 @@
-C:/msys64/ucrt64/bin/ar.exe qc libsquid_solver_static.a CMakeFiles/squid_solver_static.dir/src/card.cpp.obj CMakeFiles/squid_solver_static.dir/src/hand_eval.cpp.obj CMakeFiles/squid_solver_static.dir/src/marker.cpp.obj CMakeFiles/squid_solver_static.dir/src/bridge.cpp.obj
-C:/msys64/ucrt64/bin/ranlib.exe libsquid_solver_static.a

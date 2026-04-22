@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /build/cpp
 COPY cpp/ .
 
-RUN mkdir -p build && cd build && \
+RUN rm -rf build && mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     make -j$(nproc)
 
